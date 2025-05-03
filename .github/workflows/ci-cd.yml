@@ -1,0 +1,36 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    
+    - name: Build Docker image
+      run: docker build -t devops-example:latest .
+    
+    - name: Log in to Docker Hub
+      run: echo "${{ secrets.DOCKER_HUB_TOKEN }}" | docker login -u ${{ secrets.DOCKER_HUB_USERNAME }} --password-stdin
+    
+    - name: Push Docker image
+      run: |
+        docker tag devops-example:latest ${{ secrets.DOCKER_HUB_USERNAME }}/devops-example:latest
+        docker push ${{ secrets.DOCKER_HUB_USERNAME }}/devops-example:latest
+    
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    
+    - name: Install kubectl
+      uses: azure/setup-kubectl@v1
+    
+    - name: Deploy to Kubernetes
+      run: |
+        kubectl apply -f deployment.yaml
+        kubectl apply -f service.yaml
