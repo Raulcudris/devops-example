@@ -184,3 +184,28 @@ pipeline {
     "build": "npm install --production"
   }
 }
+
+
+stage('Checkout') {
+    steps {
+        script {
+            try {
+                checkout([
+                    $class: 'GitSCM',
+                    branches: [[name: 'main']],
+                    extensions: [
+                        [$class: 'CleanCheckout'],
+                        [$class: 'CloneOption', depth: 1, noTags: false, shallow: true]
+                    ],
+                    userRemoteConfigs: [[
+                        url: env.REPO_URL,
+                        credentialsId: env.REPO_CREDENTIALS,
+                        refspec: '+refs/heads/*:refs/remotes/origin/*'
+                    ]]
+                ])
+            } catch (Exception e) {
+                error "Error en checkout: ${e.getMessage()}"
+            }
+        }
+    }
+}
