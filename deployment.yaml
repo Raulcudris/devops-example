@@ -3,6 +3,7 @@ kind: Deployment
 metadata:
   name: devops-example
 spec:
+
   replicas: 1  # Comienza con 1 réplica para debug
   selector:
     matchLabels:

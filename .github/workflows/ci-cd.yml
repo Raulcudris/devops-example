@@ -1,4 +1,4 @@
-name: CI/CD Pipeline
+name: CI/CD Pipeline with Jenkins
 
 on:
   push:
@@ -8,10 +8,12 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     
     - name: Build Docker image
-      run: docker build -t devops-example:latest .
+      run: |
+        docker build -t devops-example:latest .
+        docker tag devops-example:latest devops-example:${{ github.sha }}
     
     - name: Log in to Docker Hub
       run: echo "${{ secrets.DOCKER_HUB_TOKEN }}" | docker login -u ${{ secrets.DOCKER_HUB_USERNAME }} --password-stdin
@@ -19,18 +21,14 @@ jobs:
     - name: Push Docker image
       run: |
         docker tag devops-example:latest ${{ secrets.DOCKER_HUB_USERNAME }}/devops-example:latest
+        docker tag devops-example:${{ github.sha }} ${{ secrets.DOCKER_HUB_USERNAME }}/devops-example:${{ github.sha }}
         docker push ${{ secrets.DOCKER_HUB_USERNAME }}/devops-example:latest
+        docker push ${{ secrets.DOCKER_HUB_USERNAME }}/devops-example:${{ github.sha }}
     
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v2
-    
-    - name: Install kubectl
-      uses: azure/setup-kubectl@v1
-    
-    - name: Deploy to Kubernetes
-      run: |
-        kubectl apply -f deployment.yaml
-        kubectl apply -f service.yaml
+    - name: Trigger Jenkins Deployment
+      uses: fjogeleit/http-request-action@v1
+      with:
+        url: '${{ secrets.JENKINS_URL }}/generic-webhook-trigger/invoke?token=${{ secrets.JENKINS_TOKEN }}'
+        method: 'POST'
+        data: '{"image_name":"${{ secrets.DOCKER_HUB_USERNAME }}/devops-example","image_tag":"${{ github.sha }}","commit_sha":"${{ github.sha }}"}'
+        customHeaders: '{"Content-Type":"application/json","Authorization":"Bearer ${{ secrets.JENKINS_TOKEN }}"}'

@@ -1,2 +1,1 @@
-# devops-example
-devops-example
+# devops_udemy
